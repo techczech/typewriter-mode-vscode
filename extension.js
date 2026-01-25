@@ -16,7 +16,7 @@ function activate (context) {
   const config = vscode.workspace.getConfiguration('typewriterAutoScroll')
   const enable = config.get('enable')
   const offset = config.get('offset')
-  context.subscriptions.push(new TypewriterAutoScroll(enable, offset))
+  context.subscriptions.push(new TypewriterAutoScroll(enable, offset, context))
 }
 
 /**
@@ -32,9 +32,10 @@ class TypewriterAutoScroll {
    * The state of the typewriter extension.
    * @param {boolean} enable - Whether the extension is enabled.
    */
-  constructor (enable, offset) {
+  constructor (enable, offset, context) {
     this.enable = enable
     this.offset = offset
+    this.subscriptions = []
     if (!this.statusBar) {
       this.statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left)
     }
@@ -51,15 +52,19 @@ class TypewriterAutoScroll {
       this.statusBar.show()
     }
 
-    const subscriptions = []
-    vscode.commands.registerCommand('toggleTypewriter', () => {
+    const toggleDisposable = vscode.commands.registerCommand('toggleTypewriter', () => {
       this.toggleEnable()
     })
-    vscode.commands.registerCommand('changeTypewriterOffset', () => {
+    const offsetDisposable = vscode.commands.registerCommand('changeTypewriterOffset', () => {
       this.changeOffset()
     })
-    vscode.workspace.onDidChangeConfiguration(this.onConfigurationChange, this, subscriptions)
-    vscode.window.onDidChangeTextEditorSelection(this.onSelectionChange, this, subscriptions)
+    this.subscriptions.push(
+      toggleDisposable,
+      offsetDisposable,
+      vscode.workspace.onDidChangeConfiguration(this.onConfigurationChange, this),
+      vscode.window.onDidChangeTextEditorSelection(this.onSelectionChange, this)
+    )
+    context.subscriptions.push(...this.subscriptions)
   }
 
   /**
@@ -84,25 +89,35 @@ class TypewriterAutoScroll {
     const newOffset = await vscode.window.showInputBox({
       title: 'Specify a new offset from the centered/focused line'
     })
-    if (newOffset) {
-      this.offset = parseInt(newOffset)
-      const configuration = vscode.workspace.getConfiguration('typewriterAutoScroll')
-      configuration.update('offset', parseInt(newOffset))
-      vscode.window.showInformationMessage(`Typewriter: changed offset to ${newOffset}`)
+    if (newOffset === undefined) {
+      return
     }
+    const parsedOffset = Number.parseInt(newOffset, 10)
+    if (Number.isNaN(parsedOffset)) {
+      vscode.window.showErrorMessage('Typewriter: offset must be an integer')
+      return
+    }
+    this.offset = parsedOffset
+    const configuration = vscode.workspace.getConfiguration('typewriterAutoScroll')
+    configuration.update('offset', parsedOffset)
+    vscode.window.showInformationMessage(`Typewriter: changed offset to ${parsedOffset}`)
   }
 
   /**
    * Centers the viewport onto the focused line when typewriter auto-scroll is enabled.
    */
   onSelectionChange (instance) {
-    if (this.enable && instance.kind !== 2) {
-      const editor = vscode.window.activeTextEditor
-      const selection = editor.selection
-      const centerScrollPosition = new vscode.Position(selection.active.line + this.offset, selection.active.character)
-      const range = new vscode.Range(centerScrollPosition, centerScrollPosition)
-      editor.revealRange(range, vscode.TextEditorRevealType.InCenter)
+    if (!this.enable || instance.kind === vscode.TextEditorSelectionChangeKind.Mouse) {
+      return
     }
+    const editor = vscode.window.activeTextEditor
+    if (!editor) {
+      return
+    }
+    const selection = editor.selection
+    const centerScrollPosition = new vscode.Position(selection.active.line + this.offset, selection.active.character)
+    const range = new vscode.Range(centerScrollPosition, centerScrollPosition)
+    editor.revealRange(range, vscode.TextEditorRevealType.InCenter)
   }
 
   /**
@@ -117,7 +132,15 @@ class TypewriterAutoScroll {
       this.enable = false
       this.statusBar.text = 'Typewriter OFF'
     }
+    this.offset = configuration.get('offset')
     this.statusBar.show()
+  }
+
+  dispose () {
+    if (this.statusBar) {
+      this.statusBar.dispose()
+    }
+    this.subscriptions.forEach(subscription => subscription.dispose())
   }
 }
 
