@@ -15,6 +15,10 @@ Work faster and more elegantly.
 * `toggleTypewriter`: enable/disable this extension.
 * `changeTypewriterOffset`: offsets the centered/focused line by the specified amount.
 
+## Antigravity Install
+
+See `AGENTS.md` for the local VSIX build and Antigravity install steps.
+
 ## Release Notes
 
 ### 1.0.0 Initial release
