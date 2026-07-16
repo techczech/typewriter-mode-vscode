@@ -1,3 +1,12 @@
+---
+name: "Typewriter Mode for VS Code"
+description: "Keeps the focused line in the middle of the screen, reducing scrolling and preserving writing focus."
+categories: [desktop-apps, desktop-app, built-by-ai]
+updated: 2026-07-16
+deployments:
+  Source:
+    "Project repository": https://github.com/techczech/typewriter-mode-vscode
+---
 [![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
 [![Last commit](https://img.shields.io/github/last-commit/MikeyJL/typewriter-auto-scroll)](https://github.com/MikeyJL/typewriter-auto-scroll)
 [![VSCode extension version](https://img.shields.io/visual-studio-marketplace/v/mikeylau.typewriter-auto-scroll)](https://marketplace.visualstudio.com/items?itemName=MikeyLau.typewriter-auto-scroll&utm_source=www.vsixhub.com)
